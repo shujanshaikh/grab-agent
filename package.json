@@ -1,7 +1,8 @@
 {
-  "name": "grab-it",
+  "name": "grab-agent",
   "type": "module",
   "version": "0.0.1",
+  "prepare": "bun run build",
   "bin": {
     "grab-it": "./dist/cli.js"
   },
