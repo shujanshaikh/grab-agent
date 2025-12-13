@@ -1,108 +1,81 @@
-import { Hono } from "hono";
-import { streamText, stepCountIs, smoothStream } from "ai";
-import net from "node:net";
-import { DEFAULT_PORT } from "./constant";
-import { serve } from "@hono/node-server";
-import { streamSSE } from "hono/streaming";
-import pc from "picocolors";
-import { pathToFileURL } from "node:url";
-import { cors } from "hono/cors";
-import { SYSTEM_PROMPT } from "./lib/prompt";
-import { tools } from "./tools";
+import WebSocket from 'ws'
+import { read_file } from './tools/read-file'
+import { apply_patch } from './tools/apply-patch'
+import { DEFAULT_SERVER_URL } from './constant'
 
-interface KaiAgentContext {
-    content: string;
-    prompt: string;
-    options?: {
-        model?: string;
-        temperature?: number;
-    };
+import pc from 'picocolors'
+
+
+interface ToolCall {
+  type: 'tool_call'
+  id: string
+  tool: string
+  args: Record<string, any>
 }
 
-const VERSION = "0.0.1";
 
-export const createServer = () => {
-    const app = new Hono();
+const toolExecutors: Record<string, (args: any) => Promise<any>> = {
+  readFile: read_file,
+  stringReplace: apply_patch,
 
-    app.use("/*", cors());  
+}
 
-    app.post("/agent", async (context) => {
-        try {
-            const body = await context.req.json<KaiAgentContext>();
-            const { content, prompt, options } = body;
-            console.log(body);
-
-            const fullPrompt = `${prompt}\n\n${content}`;
-            
-
-            return streamSSE(context, async (stream) => {
-
-                 try {
-                    const result = streamText({
-                        prompt: fullPrompt,
-                        model: "anthropic/claude-haiku-4.5",
-                        system: SYSTEM_PROMPT,
-                        temperature: options?.temperature ?? 0.3,
-                        stopWhen: stepCountIs(20),
-                        experimental_transform: smoothStream({
-                            delayInMs: 10,
-                            chunking: "line",
-                        }),
-                        maxRetries: 3,
-                        tools: tools
-                    });
-
-                    for await (const textChunk of result.textStream) {
-                        await stream.writeSSE({
-                            event: "message",
-                            data: textChunk,
-                        });
-                    }
-
-                    await stream.writeSSE({ event: "done", data: "" });
-                } catch (error) {
-                    const message =
-                    error instanceof Error ? error.message : String(error);
-                    console.error(`Error : ${message}`);
-                    await stream.writeSSE({ event: "error", data: message });
-                }
-            });
-        } catch (error) {
-            console.error("Failed to handle /agent request", error);
-            return context.text("Invalid request", 400);
+export function connectToServer(serverUrl: string) {
+  const wsUrl = `${serverUrl}/rpc`
+  const ws = new WebSocket(wsUrl)
+  
+  ws.on('open', () => {
+    console.log(pc.green('Connected to server RPC bridge'))
+  })
+  
+  ws.on('message', async (data) => {
+    const message: ToolCall = JSON.parse(data.toString())
+    
+    if (message.type === 'tool_call') {
+      console.log(`Executing tool: ${message.tool}`)
+      
+      try {
+        const executor = toolExecutors[message.tool]
+        if (!executor) {
+          throw new Error(`Unknown tool: ${message.tool}`)
         }
-    });
-
-    app.get("/health", (context) => {
-        return context.json({ status: "ok", provider: "kai" });
-    });
-
-
-    return app;
-};
-
-
-const isPortInUse = (port: number): Promise<boolean> =>
-    new Promise((resolve) => {
-        const server = net.createServer();
-        server.once("error", () => resolve(true));
-        server.once("listening", () => {
-            server.close();
-            resolve(false);
-        });
-        server.listen(port);
-    });
-
-export const startServer = async (port: number = DEFAULT_PORT) => {
-    if (await isPortInUse(port)) {
-        return
+        
+        const result = await executor(message.args)
+        
+        ws.send(JSON.stringify({
+          type: 'tool_result',
+          id: message.id,
+          result,
+        }))
+        
+        console.log(pc.green(`Tool completed: ${message.tool}`))
+      } catch (error: any) {
+        ws.send(JSON.stringify({
+          type: 'tool_result',
+          id: message.id,
+          error: error.message,
+        }))
+        
+        console.error(pc.red(`Tool failed: ${message.tool} ${error.message}`))
+      }
     }
-    const app = createServer()
-    serve({ fetch: app.fetch, port });
-    console.log(`${pc.magenta("⚛")} ${pc.bold("Grab It")} ${pc.gray(VERSION)} ${pc.dim("(Kai)")}`);
-    console.log(`- Local:    ${pc.cyan(`http://localhost:${port}`)}`);
-};
+  })
+  
+  ws.on('close', () => {
+    console.log(pc.red('Disconnected from server. Reconnecting in 5s...'))
+    setTimeout(() => connectToServer(serverUrl), 5000)
+  })
+  
+  ws.on('error', (error) => {
+    console.error(pc.red(`WebSocket error: ${error.message}`))
+  })
+  
+  return ws
+}
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-    startServer(DEFAULT_PORT).catch(console.error);
+export async function main() {
+ const serverUrl = DEFAULT_SERVER_URL
+  console.log(pc.green('Starting local grab-agent...'))
+  console.log(pc.gray(`Connecting to server at ${serverUrl}`))
+  connectToServer(serverUrl)
 }

@@ -1,4 +1,3 @@
-import { tool } from "ai";
 import { z } from "zod";
 import { readFile as fsReadFile, stat } from "node:fs/promises";
 import path from "node:path";
@@ -23,12 +22,8 @@ const read_fileSchema = z.object({
 })
 
 
-export const read_file = tool({
-  description:
-    "Read the contents of a file. For text files, the output will be the 1-indexed file contents from start_line_one_indexed to end_line_one_indexed_inclusive.",
-  inputSchema: read_fileSchema,
-  execute: async (input) => {
-    const { relative_file_path, should_read_entire_file, start_line_one_indexed, end_line_one_indexed } = input;
+export const read_file =async function(input: z.infer<typeof read_fileSchema>) {
+  const { relative_file_path, should_read_entire_file, start_line_one_indexed, end_line_one_indexed } = input;
     try {
       if (!relative_file_path) {
         return {
@@ -161,5 +156,4 @@ export const read_file = tool({
         error: 'READ_ERROR',
       };
     }
-  },
-});
+  }

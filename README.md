@@ -1,6 +1,6 @@
 # grab-agent
 
-Grab Agent provider for local server/CLI.
+Grab Agent provider for connecting React Grab to a remote agent server.
 
 ## Installation
 
@@ -14,57 +14,42 @@ bun add grab-agent
 yarn add grab-agent
 ```
 
-## Environment
+## CLI Usage
 
-Create a `.env.local` file in your project root and set your API key:
-
-```bash
-AI_GATEWAY_API_KEY="your-api-key"
-```
-
-This key is required for the agent to make gateway calls.
-
-## Server Setup
-
-The server runs on port `5678` by default.
-
-### Quick Start (CLI)
-
-Start the server in the background before running your dev server:
+The `grab-agent` CLI connects to the remote agent server and executes tool calls:
 
 ```bash
-npx grab-agent@latest && pnpm run dev
+# Install globally or use npx
+npx grab-agent
+
+# Or use the grab-it alias
+npx grab-it
+
+# With custom server URL (via environment variable)
+SERVER_URL=wss://your-server.com npx grab-agent
 ```
 
-The server runs as a detached background process. Stopping your dev server (Ctrl+C) does **not** stop the Grab Agent server. To stop it:
+### Recommended: Auto-start CLI from Config File
 
-```bash
-pkill -f "grab-agent.*server"
-# or, by port:
-# lsof -ti:5678 | xargs kill -9
-```
-
-### Recommended: Config File (Automatic Lifecycle)
-
-Start the server from your config so it stops when your dev server stops:
+Start the CLI from your config so it runs alongside your dev server:
 
 #### Vite
 ```ts
 // vite.config.ts
-import { startServer } from "grab-agent/server";
+import { main } from "grab-agent/server";
 
 if (process.env.NODE_ENV === "development") {
-  startServer();
+  main(); // Connects to remote WebSocket server
 }
 ```
 
 #### Next.js
 ```ts
 // next.config.ts
-import { startServer } from "grab-agent/server";
+import { main } from "grab-agent/server";
 
 if (process.env.NODE_ENV === "development") {
-  startServer();
+  main(); // Connects to remote WebSocket server
 }
 ```
 
@@ -110,18 +95,42 @@ import { attachAgent } from "grab-agent/client";
 attachAgent();
 ```
 
-## How It Works
-```
-┌─────────────────┐      HTTP       ┌─────────────────┐     stdin      ┌─────────────────┐
-│                 │  localhost:5678 │                 │                │                 │
-│   React Grab    │ ──────────────► │ Grab Agent Server│ ─────────────► │  grab-agent CLI │
-│    (Browser)    │ ◄────────────── │   (Node.js)     │ ◄───────────── │    (Agent)      │
-│                 │       SSE       │                 │     stdout     │                 │
-└─────────────────┘                 └─────────────────┘                └─────────────────┘
-      Client                              Server                            Agent
+### Custom Server URL
+
+By default, the client connects to the production server. To use a custom server:
+
+```tsx
+import { createKaiAgentProvider } from "grab-agent/client";
+
+const provider = createKaiAgentProvider({
+  serverUrl: "https://your-custom-server.com",
+});
+
+// Then integrate with react-grab
+api.setAgent({ provider, storage: sessionStorage });
 ```
 
-1. **React Grab** sends the selected element context to the server via HTTP POST.
-2. **Grab Agent server** receives the request and spawns the local `grab-agent` agent process.
-3. **grab-agent agent** processes the request and streams JSON responses to stdout.
-4. **Server** relays status updates to the client via Server-Sent Events (SSE).
+## Configuration
+
+### Environment Variables
+
+- `SERVER_URL` - WebSocket URL for the CLI to connect to (default: `wss://grab-agent-server-production.up.railway.app`)
+- The client uses `https://grab-agent-server-production.up.railway.app` by default
+
+## How It Works
+```
+┌─────────────────┐      HTTP/SSE      ┌──────────────────────┐      WebSocket      ┌─────────────────┐
+│                 │  Railway Server    │                      │                     │                 │
+│   React Grab    │ ──────────────────► │  Grab Agent Server   │ ◄─────────────────── │  grab-agent CLI │
+│    (Browser)    │ ◄────────────────── │   (Remote Server)    │                     │   (Local CLI)   │
+│                 │                     │                      │                     │                 │
+└─────────────────┘                     └──────────────────────┘                     └─────────────────┘
+      Client                                 Server                                        Agent CLI
+```
+
+1. **React Grab** (browser) sends the selected element context to the remote server via HTTP POST (`/agent` endpoint).
+2. **Grab Agent Server** (remote) receives the request and forwards tool calls to connected CLI agents via WebSocket (`/rpc` endpoint).
+3. **grab-agent CLI** (local) connects to the server via WebSocket, receives tool calls, executes them locally, and sends results back.
+4. **Server** relays status updates and responses back to the browser client via Server-Sent Events (SSE).
+
+The CLI must be running locally to execute tool calls (like reading files or applying patches) in your workspace.

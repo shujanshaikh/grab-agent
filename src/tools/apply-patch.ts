@@ -1,4 +1,3 @@
-import { tool } from "ai";
 import { z } from "zod";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -9,12 +8,9 @@ const apply_patchSchema = z.object({
     old_string: z.string().describe("The text to replace (must be unique within the file, and must match the file contents exactly, including all whitespace and indentation)"),
 })
 
-export const apply_patch = tool({
-    description : "Use this tool to propose a search and replace operation on an existing file.\n\nThe tool will replace ONE occurrence of old_string with new_string in the specified file.\n\nCRITICAL REQUIREMENTS FOR USING THIS TOOL:\n\n1. UNIQUENESS: The old_string MUST uniquely identify the specific instance you want to change. This means:\n   - Include AT LEAST 3-5 lines of context BEFORE the change point\n   - Include AT LEAST 3-5 lines of context AFTER the change point\n   - Include all whitespace, indentation, and surrounding code exactly as it appears in the file\n\n2. SINGLE INSTANCE: This tool can only change ONE instance at a time. If you need to change multiple instances:\n   - Make separate calls to this tool for each instance\n   - Each call must uniquely identify its specific instance using extensive context\n\n3. VERIFICATION: Before using this tool:\n   - If multiple instances exist, gather enough context to uniquely identify each one\n   - Plan separate tool calls for each instance\n",
-    inputSchema : apply_patchSchema,
-    execute : async (input) => {
-        try {
-            const { file_path, new_string, old_string } = input;    
+export const apply_patch = async function(input: z.infer<typeof apply_patchSchema>) {
+    const { file_path, new_string, old_string } = input;    
+    try {
             if (!file_path) {
                 return {
                     success: false,
@@ -109,4 +105,3 @@ export const apply_patch = tool({
             };
         }
     }
-})

@@ -1,2 +1,2 @@
-export const DEFAULT_PORT = 5678;
-export const CONNECTION_CHECK_TTL_MS = 5000;
+export const DEFAULT_SERVER_URL = "wss://grab-agent-server-production.up.railway.app";
+export const SERVER_URL = "https://grab-agent-server-production.up.railway.app"

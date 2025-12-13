@@ -1,7 +1,7 @@
 {
   "name": "grab-agent",
   "type": "module",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "prepare": "bun run build",
   "bin": {
     "grab-it": "./dist/cli.js",
@@ -38,10 +38,12 @@
   "dependencies": {
     "@ai-sdk/google": "^2.0.44",
     "@hono/node-server": "^1.19.7",
+    "@types/ws": "^8.18.1",
     "ai": "^5.0.108",
     "hono": "^4.10.7",
     "picocolors": "^1.1.1",
     "react-grab": "^0.0.74",
-    "tsup": "^8.5.1"
+    "tsup": "^8.5.1",
+    "ws": "^8.18.3"
   }
 }

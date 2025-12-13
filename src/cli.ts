@@ -1,20 +1,29 @@
-#!/usr/bin/env node
-import { spawn } from "node:child_process";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 import pc from "picocolors";
-import { DEFAULT_PORT } from "./constant";
+import { main } from "./server";
 
-const VERSION = process.env.VERSION ?? "0.0.0";
+const VERSION = process.env.VERSION ?? "0.0.1";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Parse command line arguments
+const args = process.argv.slice(2);
 
-const serverPath = join(__dirname, "server.js");
-spawn(process.execPath, [serverPath], {
-  detached: true,
-  stdio: "ignore",
-}).unref();
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === "--help" || args[i] === "-h") {
+    console.log(`
+${pc.bold("Grab Agent CLI")} ${pc.gray(VERSION)}
 
-console.log(`${pc.magenta("⚛")} ${pc.bold("Grab It")} ${pc.gray(VERSION)} ${pc.dim("(Kai)")}`);
-console.log(`- Local:    ${pc.cyan(`http://localhost:${DEFAULT_PORT}`)}`);
+Usage: grab-agent [options]
+
+Options:
+  --help, -h            Show this help message
+
+Environment Variables:
+  SERVER_URL         Server URL to connect to
+
+Example:
+  grab-agent --server-url wss://grab-agent-server.onrender.com
+    `);
+    process.exit(0);
+  }
+}
+
+main();
