@@ -2,8 +2,11 @@ import WebSocket from 'ws'
 import { read_file } from './tools/read-file'
 import { apply_patch } from './tools/apply-patch'
 import { DEFAULT_SERVER_URL } from './constant'
-
 import pc from 'picocolors'
+import { editFiles } from './tools/editFIle'
+import { deleteFile } from './tools/deleteFile'
+import { globTool } from './tools/glob'
+import { list } from './tools/listDir'
 
 
 interface ToolCall {
@@ -15,9 +18,12 @@ interface ToolCall {
 
 
 const toolExecutors: Record<string, (args: any) => Promise<any>> = {
+  editFile: editFiles,
+  deleteFile: deleteFile,
+  glob: globTool,
+  listDirectory: list,
   readFile: read_file,
   stringReplace: apply_patch,
-
 }
 
 export function connectToServer(serverUrl: string) {
@@ -32,7 +38,6 @@ export function connectToServer(serverUrl: string) {
     const message: ToolCall = JSON.parse(data.toString())
     
     if (message.type === 'tool_call') {
-      console.log(`Executing tool: ${message.tool}`)
       
       try {
         const executor = toolExecutors[message.tool]
@@ -48,7 +53,7 @@ export function connectToServer(serverUrl: string) {
           result,
         }))
         
-        console.log(pc.green(`Tool completed: ${message.tool}`))
+        console.log(pc.cyan(`✓ ${message.tool}`))
       } catch (error: any) {
         ws.send(JSON.stringify({
           type: 'tool_result',
@@ -75,7 +80,7 @@ export function connectToServer(serverUrl: string) {
 
 export async function main() {
  const serverUrl = DEFAULT_SERVER_URL
-  console.log(pc.green('Starting local grab-agent...'))
-  console.log(pc.gray(`Connecting to server at ${serverUrl}`))
+    console.log(pc.cyan('Starting local grab-agent...'))
+    console.log(pc.gray(`Connecting to server at ${serverUrl}`))
   connectToServer(serverUrl)
 }

@@ -25,18 +25,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
+       <head>
         {process.env.NODE_ENV === "development" && (
-          <>
-            <Script
-              src="//unpkg.com/react-grab/dist/index.global.js"
-              strategy="beforeInteractive"
-            />
-            <Script
-              src="/grab-agent.global.js"
-              strategy="lazyOnload"
-            />
-          </>
+ <>
+ <Script
+   src="//unpkg.com/react-grab/dist/index.global.js"
+   strategy="beforeInteractive"
+ />
+ <Script
+   src="/grab-agent.global.js"
+   strategy="lazyOnload"
+ />
+</>
         )}
       </head>
       <body

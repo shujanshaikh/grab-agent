@@ -26,4 +26,5 @@ Example:
   }
 }
 
+console.log(pc.cyan('Starting Grab Agent CLI'))
 main();
