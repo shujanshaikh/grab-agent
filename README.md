@@ -1,4 +1,4 @@
-# grab-it
+# grab-agent
 
 Grab Agent provider for connecting React Grab to a remote agent server.
 
