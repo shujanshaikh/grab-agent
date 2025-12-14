@@ -83,7 +83,7 @@ app.post("/agent", async (context) => {
             stopWhen: stepCountIs(20),
             experimental_transform: smoothStream({
               delayInMs: 10,
-              chunking: "word",
+              chunking: "line",
             }),
             tools: tools
           });
