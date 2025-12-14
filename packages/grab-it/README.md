@@ -18,16 +18,6 @@ yarn add grab-agent
 
 The `grab-agent` CLI connects to the remote agent server and executes tool calls:
 
-```bash
-# Install globally or use npx
-npx grab-agent
-
-# Or use the grab-it alias
-npx grab-it
-
-# With custom server URL (via environment variable)
-SERVER_URL=wss://your-server.com npx grab-agent
-```
 
 ### Recommended: Auto-start CLI from Config File
 
@@ -95,20 +85,6 @@ import { attachAgent } from "grab-agent/client";
 attachAgent();
 ```
 
-### Custom Server URL
-
-By default, the client connects to the production server. To use a custom server:
-
-```tsx
-import { createKaiAgentProvider } from "grab-agent/client";
-
-const provider = createKaiAgentProvider({
-  serverUrl: "https://your-custom-server.com",
-});
-
-// Then integrate with react-grab
-api.setAgent({ provider, storage: sessionStorage });
-```
 
 ## Configuration
 
