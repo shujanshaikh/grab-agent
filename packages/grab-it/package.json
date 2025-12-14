@@ -30,7 +30,8 @@
     "build": "rm -rf dist && NODE_ENV=production tsup"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/node": "22"
   },
   "peerDependencies": {
     "typescript": "^5"
